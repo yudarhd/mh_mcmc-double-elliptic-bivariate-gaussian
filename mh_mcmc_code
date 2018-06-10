@@ -341,6 +341,7 @@ param9 = data[:,9]
 param10 = data[:,10]
 param11 = data[:,11]
 
+#define step burn in
 n_iter = 1000000
 burn_in = int(0.8 * n_iter)
 
