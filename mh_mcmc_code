@@ -1,0 +1,482 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Thu Apr 12 10:07:49 2018
+
+@author: Yuda Arif Hidayat
+"""
+
+import numpy as np
+import matplotlib.pyplot as pl
+import random
+import math
+import os
+
+#define data
+data = np.loadtxt('NGC2244.txt')
+mu_x = data[:,0]
+mu_y = data[:,1]
+B = data[:,2]
+V = data[:,3]
+
+#define function
+def double_gauss(mu_x, mu_y, nf, sigma_xc, sigma_xf, sigma_yc, sigma_yf, rho_c, rho_f, mu_x_0c, mu_x_0f, mu_y_0c, mu_y_0f):
+    a1 = ((1 - nf)/(2*np.pi*sigma_xc*sigma_yc*np.sqrt(1 - rho_c**2)))
+    b1 = (-1/(2*(1 - rho_c**2)))
+    c1 = ((mu_x - mu_x_0c)/sigma_xc)
+    d1 = ((mu_y - mu_y_0c)/sigma_yc)
+    a2 = (nf/(2*np.pi*sigma_xf*sigma_yf*np.sqrt(1 - rho_f**2)))
+    b2 = (-1/(2*(1 - rho_f**2)))
+    c2 = ((mu_x - mu_x_0f)/sigma_xf)
+    d2 = ((mu_y - mu_y_0f)/sigma_yf)
+    return a1*np.exp(b1*(c1**2 + d1**2 - 2*rho_c*c1*d1)) + a2*np.exp(b2*(c2**2 + d2**2 - 2*rho_f*c2*d2))
+
+#define likelihood and make ln
+def L(mu_x, mu_y, nf, sigma_xc, sigma_xf, sigma_yc, sigma_yf, rho_c, rho_f, mu_x_0c, mu_x_0f, mu_y_0c, mu_y_0f):
+    model1 = []
+    for i in range(len(mu_x)):
+        model = double_gauss(mu_x[i], mu_y[i], nf, sigma_xc, sigma_xf, sigma_yc, sigma_yf, rho_c, rho_f, mu_x_0c, mu_x_0f, mu_y_0c, mu_y_0f)
+        
+        if model >= 10**-100:
+            model1.append(np.log(model))
+        elif model < 10**-100:
+            model1.append(np.log(10**-100))
+    CS = np.sum(model1)
+    return CS
+
+#define member of probability 
+def member_prob(mu_x, mu_y, nf, sigma_xc, sigma_xf, sigma_yc, sigma_yf, rho_c, rho_f, mu_x_0c, mu_x_0f, mu_y_0c, mu_y_0f):
+    a1 = ((1 - nf)/(2*np.pi*sigma_xc*sigma_yc*np.sqrt(1 - rho_c**2)))
+    b1 = (-1/(2*(1 - rho_c**2)))
+    c1 = ((mu_x - mu_x_0c)/sigma_xc)
+    d1 = ((mu_y - mu_y_0c)/sigma_yc)
+    a2 = (nf/(2*np.pi*sigma_xf*sigma_yf*np.sqrt(1 - rho_f**2)))
+    b2 = (-1/(2*(1 - rho_f**2)))
+    c2 = ((mu_x - mu_x_0f)/sigma_xf)
+    d2 = ((mu_y - mu_y_0f)/sigma_yf)
+    phi_c = a1*np.exp(b1*(c1**2 + d1**2 - 2*rho_c*c1*d1))
+    phi_f = a2*np.exp(b2*(c2**2 + d2**2 - 2*rho_f*c2*d2))
+    return phi_c/(phi_c + phi_f)
+
+#initalguess
+nf = 0.5
+sigma_xc = 0.057
+sigma_xf = 0.298
+sigma_yc = 0.052
+sigma_yf = 0.59
+rho_c = 0.01
+rho_f = 0.01
+mu_x_0c = -0.076
+mu_x_0f = -0.094
+mu_y_0c = 0.246
+mu_y_0f = 0.168
+
+delta_nf = 0.001
+delta_sigma_xc = 0.001
+delta_sigma_xf = 0.001
+delta_sigma_yc = 0.001
+delta_sigma_yf = 0.001
+delta_rho_c = 0.001
+delta_rho_f = 0.001
+delta_mu_x_0c = 0.001
+delta_mu_x_0f = 0.001
+delta_mu_y_0c = 0.001
+delta_mu_y_0f = 0.001
+
+#prior
+def it_par(nf, sigma_xc, sigma_xf, sigma_yc, sigma_yf, rho_c, rho_f, mu_x_0c, mu_x_0f, mu_y_0c, mu_y_0f):
+    nf_test = nf + np.random.normal(0.0, delta_nf, 1)
+    sigma_xc_test = sigma_xc + np.random.normal(0.0, delta_sigma_xc, 1)
+    sigma_xf_test = sigma_xf + np.random.normal(0.0, delta_sigma_xf, 1)
+    sigma_yc_test = sigma_yc + np.random.normal(0.0, delta_sigma_yc, 1)
+    sigma_yf_test = sigma_yf + np.random.normal(0.0, delta_sigma_yf, 1)
+    rho_c_test = rho_c + np.random.normal(0.0, delta_rho_c, 1)
+    rho_f_test = rho_f + np.random.normal(0.0, delta_rho_f, 1)
+    mu_x_0c_test = mu_x_0c + np.random.normal(0.0, delta_mu_x_0c, 1)
+    mu_x_0f_test = mu_x_0f + np.random.normal(0.0, delta_mu_x_0f, 1)
+    mu_y_0c_test = mu_y_0c + np.random.normal(0.0, delta_mu_y_0c, 1)
+    mu_y_0f_test = mu_y_0f + np.random.normal(0.0, delta_mu_y_0f, 1)
+    
+    if 0.0 < nf_test < 1.0:
+        nf = nf_test
+    if 0.0 < sigma_xc_test < 0.5:
+        sigma_xc = sigma_xc_test
+    if 0.0 < sigma_xf_test < 0.6:
+        sigma_xf = sigma_xf_test
+    if 0.0 < sigma_yc_test < 1.5:
+        sigma_yc = sigma_yc_test
+    if 0.0 < sigma_yf_test < 2.0:
+        sigma_yf = sigma_yf_test
+    if -1.0 < rho_c_test < 1.0:
+        rho_c = rho_c_test
+    if -1.0 < rho_f_test < 1.0:
+        rho_f = rho_f_test
+    if -0.2 < mu_x_0c_test < 0.1:
+        mu_x_0c = mu_x_0c_test
+    if -0.2 < mu_x_0f_test < 0.1:
+        mu_x_0f = mu_x_0f_test
+    if 0.1 < mu_y_0c_test < 0.5:
+        mu_y_0c = mu_y_0c_test
+    if -0.1 < mu_y_0f_test < 0.5:
+        mu_y_0f = mu_y_0f_test
+    elif nf_test < 0.0 or nf_test > 1.0:
+        while nf_test < 0.0 or nf_test > 1.0:
+            nf_test = nf + np.random.normal(0.0, delta_nf, 1)
+        nf = nf_test
+    elif sigma_xc_test < 0.0 or sigma_xc_test > 0.5:
+        while sigma_xc_test < 0.0 or sigma_xc_test > 0.5:
+            sigma_xc_test = sigma_xc + np.random.normal(0.0, delta_sigma_xc, 1)
+        sigma_xc = sigma_xc_test
+    elif sigma_xf_test < 0.0 or sigma_xf_test > 0.6:
+        while sigma_xf_test < 0.0 or sigma_xf_test > 0.6:
+            sigma_xf_test = sigma_xf + np.random.normal(0.0, delta_sigma_xf, 1)
+        sigma_xf = sigma_xf_test
+    elif sigma_yc_test < 0.0 or sigma_yc_test > 1.5:
+        while sigma_yc_test < 0.0 or sigma_yc_test > 1.5:
+            sigma_yc_test = sigma_yc + np.random.normal(0.0, delta_sigma_yc, 1)
+        sigma_yc = sigma_yc_test
+    elif sigma_yf_test < 0.0 or sigma_yf_test > 2.0:
+        while sigma_yf_test < 0.0 or sigma_yf_test > 2.0:
+            sigma_yf_test = sigma_yf + np.random.normal(0.0, delta_sigma_yf, 1)
+        sigma_yf = sigma_yf_test
+    elif rho_c_test < -1.0 or rho_c_test > 1.0:
+        while rho_c_test < -1.0 or rho_c_test > 1.0:
+            rho_c_test = rho_c + np.random.normal(0.0, delta_rho_c, 1)
+        rho_c = rho_c_test
+    elif rho_f_test < -1.0 or rho_f_test > 1.0:
+        while rho_f_test < -1.0 or rho_f_test > 1.0:
+            rho_f_test = rho_f + np.random.normal(0.0, delta_rho_f, 1)
+        rho_f = rho_f_test
+    elif mu_x_0c_test < -0.2 or mu_x_0c_test > 0.1:
+        while mu_x_0c_test < -0.2 or mu_x_0c_test > 0.1:
+            mu_x_0c_test = mu_x_0c + np.random.normal(0.0, delta_mu_x_0c, 1)
+        mu_x_0c = mu_x_0c_test
+    elif mu_x_0f_test < -0.2 or mu_x_0f_test > 0.1:
+        while mu_x_0f_test < -0.2 or mu_x_0f_test > 0.1:
+            mu_x_0f_test = mu_x_0f + np.random.normal(0.0, delta_mu_x_0f, 1)
+        mu_x_0f = mu_x_0f_test
+    elif mu_y_0c_test < 0.1 or mu_y_0c_test > 0.5:
+        while mu_y_0c_test < 0.1 or mu_y_0c_test > 0.5:
+            mu_y_0c_test = mu_y_0c + np.random.normal(0.0, delta_mu_y_0c, 1)
+        mu_y_0c = mu_y_0c_test
+    elif mu_y_0f_test < -1.0 or mu_y_0f_test > 0.5:
+        while mu_y_0f_test < -1.0 or mu_y_0f_test > 0.5:
+            mu_y_0f_test = mu_y_0f + np.random.normal(0.0, delta_mu_y_0f, 1)
+        mu_y_0f = mu_y_0f_test
+    return nf, sigma_xc, sigma_xf, sigma_yc, sigma_yf, rho_c, rho_f, mu_x_0c, mu_x_0f, mu_y_0c, mu_y_0f
+
+nf1 = []
+sigma_xc1 = []
+sigma_xf1 = []
+sigma_yc1 = []
+sigma_yf1 = []
+rho_c1 = []
+rho_f1 = []
+mu_x_0c1 = []
+mu_x_0f1 = []
+mu_y_0c1 = []
+mu_y_0f1 = []
+
+#Metropolis-Hastings
+
+n = 1000000
+step = []
+Like = []
+for i in range(0, n, 1):
+    theta = it_par(nf, sigma_xc, sigma_xf, sigma_yc, sigma_yf, rho_c, rho_f, mu_x_0c, mu_x_0f, mu_y_0c, mu_y_0f)
+    
+    likelihood2 = L(mu_x, mu_y, theta[0], theta[1], theta[2], theta[3], theta[4], theta[5], theta[6], theta[7], theta[8], theta[9], theta[10])
+    likelihood1 = L(mu_x, mu_y, nf, sigma_xc, sigma_xf, sigma_yc, sigma_yf, rho_c, rho_f, mu_x_0c, mu_x_0f, mu_y_0c, mu_y_0f)
+    
+    r = np.log(random.uniform(0.,1.))
+    q = likelihood2 - likelihood1
+    if q >= np.log(1):
+        #print "TERIMA-1"
+        nf1.append(theta[0])
+        sigma_xc1.append(theta[1])
+        sigma_xf1.append(theta[2])
+        sigma_yc1.append(theta[3])
+        sigma_yf1.append(theta[4])
+        rho_c1.append(theta[5])
+        rho_f1.append(theta[6])
+        mu_x_0c1.append(theta[7])
+        mu_x_0f1.append(theta[8])
+        mu_y_0c1.append(theta[9])
+        mu_y_0f1.append(theta[10])
+        Like.append(likelihood2)
+        
+        nf = theta[0]
+        sigma_xc = theta[1]
+        sigma_xf = theta[2]
+        sigma_yc = theta[3]
+        sigma_yf = theta[4]
+        rho_c = theta[5]
+        rho_f = theta[6]
+        mu_x_0c = theta[7]
+        mu_x_0f = theta[8]
+        mu_y_0c = theta[9]
+        mu_y_0f = theta[10]
+    
+    if q < np.log(1):
+        if q >= r:
+            #print "TERIMA-2"
+            nf1.append(theta[0])
+            sigma_xc1.append(theta[1])
+            sigma_xf1.append(theta[2])
+            sigma_yc1.append(theta[3])
+            sigma_yf1.append(theta[4])
+            rho_c1.append(theta[5])
+            rho_f1.append(theta[6])
+            mu_x_0c1.append(theta[7])
+            mu_x_0f1.append(theta[8])
+            mu_y_0c1.append(theta[9])
+            mu_y_0f1.append(theta[10])
+            Like.append(likelihood2)
+            
+            nf = theta[0]
+            sigma_xc = theta[1]
+            sigma_xf = theta[2]
+            sigma_yc = theta[3]
+            sigma_yf = theta[4]
+            rho_c = theta[5]
+            rho_f = theta[6]
+            mu_x_0c = theta[7]
+            mu_x_0f = theta[8]
+            mu_y_0c = theta[9]
+            mu_y_0f = theta[10]
+            
+        elif q < r:
+            #print "TOLAK"
+            nf1.append(nf)
+            sigma_xc1.append(sigma_xc)
+            sigma_xf1.append(sigma_xf)
+            sigma_yc1.append(sigma_yc)
+            sigma_yf1.append(sigma_yf)
+            rho_c1.append(rho_c)
+            rho_f1.append(rho_f)
+            mu_x_0c1.append(mu_x_0c)
+            mu_x_0f1.append(mu_x_0f)
+            mu_y_0c1.append(mu_y_0c)
+            mu_y_0f1.append(mu_y_0f)
+            Like.append(likelihood1)
+            
+            nf = nf
+            sigma_xc = sigma_xc
+            sigma_xf = sigma_xf
+            sigma_yc = sigma_yc
+            sigma_yf = sigma_yf
+            rho_c = rho_c
+            rho_f = rho_f
+            mu_x_0c = mu_x_0c
+            mu_x_0f = mu_x_0f
+            mu_y_0c = mu_y_0c
+            mu_y_0f = mu_y_0f
+            
+    step.append(i)
+    print(step[i], Like[i])
+
+probability = []
+nf_fix = nf1[len(step)-1]
+sigma_xc_fix = sigma_xc1[len(step)-1]
+sigma_xf_fix = sigma_xf1[len(step)-1]
+sigma_yc_fix = sigma_yc1[len(step)-1]
+sigma_yf_fix = sigma_yf1[len(step)-1]
+rho_c_fix = rho_c1[len(step)-1]
+rho_f_fix = rho_f1[len(step)-1]
+mu_x_0c_fix = mu_x_0c1[len(step)-1]
+mu_x_0f_fix = mu_x_0f1[len(step)-1]
+mu_y_0c_fix = mu_y_0c1[len(step)-1]
+mu_y_0f_fix = mu_y_0f1[len(step)-1]
+
+#save result
+for i in range(len(mu_x)):
+    result = member_prob(mu_x[i], mu_y[i], nf_fix, sigma_xc_fix, sigma_xf_fix, sigma_yc_fix, sigma_yf_fix, rho_c_fix, rho_f_fix, mu_x_0c_fix, mu_x_0f_fix, mu_y_0c_fix, mu_y_0f_fix)
+    probability.append(result)
+
+np.savetxt('result.txt', np.c_[step, nf1, sigma_xc1, sigma_xf1, sigma_yc1, sigma_yf1, rho_c1, rho_f1, mu_x_0c1, mu_x_0f1, mu_y_0c1, mu_y_0f1, Like])
+np.savetxt('probability.txt', np.c_[probability, mu_x, mu_y, B, V])
+
+print
+print
+print "RESULT"
+print 'nf = ', nf_fix 
+print 'sigma_xc = ', sigma_xc_fix
+print 'sigma_xf = ', sigma_xf_fix
+print 'sigma_yc = ', sigma_yc_fix
+print 'sigma_yf = ', sigma_yf_fix
+print 'rho_c = ', rho_c_fix
+print 'rho_f = ', rho_f_fix
+print 'mu_x_0c = ', mu_x_0c_fix
+print 'mu_x_0f = ', mu_x_0f_fix
+print 'mu_y_0c = ', mu_y_0c_fix
+print 'mu_y_0f = ', mu_y_0f_fix
+
+
+
+#check parameters
+# -*- coding: utf-8 -*-
+"""
+Created on Sun Apr 29 19:56:45 2018
+
+@author: Yuda Arif Hidayat
+"""
+
+import numpy as np
+import matplotlib.pyplot as plt
+import random
+import math
+import os
+
+
+data = np.loadtxt('result.txt')
+step = data[:,0]
+param1 = data[:,1]
+param2 = data[:,2]
+param3 = data[:,3]
+param4 = data[:,4]
+param5 = data[:,5]
+param6 = data[:,6]
+param7 = data[:,7]
+param8 = data[:,8]
+param9 = data[:,9]
+param10 = data[:,10]
+param11 = data[:,11]
+
+n_iter = 1000000
+burn_in = int(0.8 * n_iter)
+
+a_list = param1[burn_in+1:]
+b_list = param2[burn_in+1:]
+c_list = param3[burn_in+1:]
+d_list = param4[burn_in+1:]
+e_list = param5[burn_in+1:]
+f_list = param6[burn_in+1:]
+g_list = param7[burn_in+1:]
+h_list = param8[burn_in+1:]
+i_list = param9[burn_in+1:]
+j_list = param10[burn_in+1:]
+k_list = param11[burn_in+1:]
+
+a_best = np.mean(a_list) 
+b_best = np.mean(b_list)
+c_best = np.mean(c_list)
+d_best = np.mean(d_list)
+e_best = np.mean(e_list) 
+f_best = np.mean(f_list)
+g_best = np.mean(g_list)
+h_best = np.mean(h_list)
+i_best = np.mean(i_list) 
+j_best = np.mean(j_list)
+k_best = np.mean(k_list)
+
+a_std = np.std(a_list) 
+b_std = np.std(b_list)
+c_std = np.std(c_list)
+d_std = np.std(d_list)
+e_std = np.std(e_list) 
+f_std = np.std(f_list)
+g_std = np.std(g_list)
+h_std = np.std(h_list)
+i_std = np.std(i_list) 
+j_std = np.std(j_list)
+k_std = np.std(k_list)
+
+print
+print
+print "RESULT"
+print 'nf = ', a_best, '+/-', a_std
+print 'mu_x_0c = ', h_best , '+/-', h_std
+print 'mu_y_0c = ', j_best, '+/-', j_std
+print 'sigma_xc = ', b_best, '+/-', b_std
+print 'sigma_yc = ', d_best , '+/-', d_std
+print 'rho_c = ', f_best , '+/-', f_std
+print 'mu_x_0f = ', i_best, '+/-', i_std
+print 'mu_y_0f = ', k_best, '+/-', k_std
+print 'sigma_xf = ', c_best , '+/-', c_std
+print 'sigma_yf = ', e_best , '+/-', e_std
+print 'rho_f = ', g_best , '+/-', g_std
+
+plt.figure(0)
+plt.plot(range(len(param1)),param1,'b-', lw = 0.5, label='$n_f$')
+plt.plot([burn_in,burn_in],[min(param1)-0.5,max(param1)+0.5],'k--')
+plt.ylim(min(param1)-0.5,max(param1)+0.5)
+plt.title('Step vs. Nilai Parameter $n_f$')
+plt.xlabel('Step')
+plt.ylabel('Nilai $n_f$')
+plt.legend(loc='best')
+plt.savefig('0.param1.png')
+
+plt.figure(1)
+plt.plot(range(len(param2)),param2,'b-', lw = 0.5, label='$\mu_{x0c}$')
+plt.plot([burn_in,burn_in],[min(param2)-0.5,max(param2)+0.5],'k--')
+plt.ylim(min(param2)-0.5,max(param2)+0.5)
+plt.title('Step vs. Nilai Parameter $\mu_{x0c}$')
+plt.xlabel('Step')
+plt.ylabel('Nilai $\mu_{x0c}$')
+plt.legend(loc='best')
+plt.savefig('0.param2.png')
+
+plt.figure(2)
+plt.plot(range(len(param3)),param3,'b-', lw = 0.5)
+plt.plot([burn_in,burn_in],[min(param3)-0.5,max(param3)+0.5],'k--')
+plt.ylim(min(param3)-0.5,max(param3)+0.5)
+plt.savefig('0.param3.png')
+
+plt.figure(3)
+plt.plot(range(len(param4)),param4,'b-', lw = 0.5,label='$\sigma_{xc}$')
+plt.plot([burn_in,burn_in],[min(param4)-0.5,max(param4)+0.5],'k--')
+plt.ylim(min(param4)-0.5,max(param4)+0.5)
+plt.title('Step vs. Nilai Parameter $\sigma_{xc}$')
+plt.xlabel('Step')
+plt.ylabel('Nilai $\sigma_{xc}$')
+plt.legend(loc='best')
+plt.savefig('0.param4.png')
+
+plt.figure(4)
+plt.plot(range(len(param5)),param5,'b-', lw = 0.5)
+plt.plot([burn_in,burn_in],[min(param5)-0.5,max(param5)+0.5],'k--')
+plt.ylim(min(param5)-0.5,max(param5)+0.5)
+plt.savefig('0.param5.png')
+
+plt.figure(5)
+plt.plot(range(len(param6)),param6,'b-', lw = 0.5)
+plt.plot([burn_in,burn_in],[min(param6)-0.5,max(param6)+0.5],'k--')
+plt.ylim(min(param6)-0.5,max(param6)+0.5)
+plt.savefig('0.param6.png')
+
+plt.figure(6)
+plt.plot(range(len(param7)),param7,'b-', lw = 0.5)
+plt.plot([burn_in,burn_in],[min(param7)-0.5,max(param7)+0.5],'k--')
+plt.ylim(min(param7)-0.5,max(param7)+0.5)
+plt.savefig('0.param7.png')
+
+plt.figure(7)
+plt.plot(range(len(param8)),param8,'b-', lw = 0.5, label='$\mu_{y0f}$')
+plt.plot([burn_in,burn_in],[min(param8)-0.5,max(param8)+0.5],'k--')
+plt.ylim(min(param8)-0.5,max(param8)+0.5)
+plt.title('Step vs. Nilai Parameter $\mu_{y0f}$')
+plt.xlabel('Step')
+plt.ylabel('Nilai $\mu_{y0f}$')
+plt.legend(loc='best')
+plt.savefig('0.param8.png')
+
+plt.figure(8)
+plt.plot(range(len(param9)),param9,'b-', lw = 0.5)
+plt.plot([burn_in,burn_in],[min(param9)-0.5,max(param9)+0.5],'k--')
+plt.ylim(min(param9)-0.5,max(param9)+0.5)
+plt.savefig('0.param9.png')
+
+plt.figure(9)
+plt.plot(range(len(param10)),param10,'b-', lw = 0.5, label='$\sigma_{xf}$')
+plt.plot([burn_in,burn_in],[min(param10)-0.5,max(param10)+0.5],'k--')
+plt.ylim(min(param10)-0.5,max(param10)+0.5)
+plt.title('Step vs. Nilai Parameter $\sigma_{xf}$')
+plt.xlabel('Step')
+plt.ylabel('Nilai $\sigma_{xf}$')
+plt.legend(loc='best')
+plt.savefig('0.param10.png')
+
+plt.figure(10)
+plt.plot(range(len(param11)),param11,'b-', lw = 0.5)
+plt.plot([burn_in,burn_in],[min(param11)-0.5,max(param11)+0.5],'k--')
+plt.ylim(min(param11)-0.5,max(param11)+0.5)
+plt.savefig('0.param11.png')
