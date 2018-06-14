@@ -19,7 +19,7 @@ B = data[:,2]
 V = data[:,3]
 
 #define function
-def double_gauss(mu_x, mu_y, nf, sigma_xc, sigma_xf, sigma_yc, sigma_yf, rho_c, rho_f, mu_x_0c, mu_x_0f, mu_y_0c, mu_y_0f):
+def gauss_sm(mu_x, mu_y, nf, sigma_xc, sigma_xf, sigma_yc, sigma_yf, rho_c, rho_f, mu_x_0c, mu_x_0f, mu_y_0c, mu_y_0f):
     a1 = ((1 - nf)/(2*np.pi*sigma_xc*sigma_yc*np.sqrt(1 - rho_c**2)))
     b1 = (-1/(2*(1 - rho_c**2)))
     c1 = ((mu_x - mu_x_0c)/sigma_xc)
@@ -31,10 +31,10 @@ def double_gauss(mu_x, mu_y, nf, sigma_xc, sigma_xf, sigma_yc, sigma_yf, rho_c, 
     return a1*np.exp(b1*(c1**2 + d1**2 - 2*rho_c*c1*d1)) + a2*np.exp(b2*(c2**2 + d2**2 - 2*rho_f*c2*d2))
 
 #define likelihood and make ln
-def L(mu_x, mu_y, nf, sigma_xc, sigma_xf, sigma_yc, sigma_yf, rho_c, rho_f, mu_x_0c, mu_x_0f, mu_y_0c, mu_y_0f):
+def log_likelihood(mu_x, mu_y, nf, sigma_xc, sigma_xf, sigma_yc, sigma_yf, rho_c, rho_f, mu_x_0c, mu_x_0f, mu_y_0c, mu_y_0f):
     model1 = []
     for i in range(len(mu_x)):
-        model = double_gauss(mu_x[i], mu_y[i], nf, sigma_xc, sigma_xf, sigma_yc, sigma_yf, rho_c, rho_f, mu_x_0c, mu_x_0f, mu_y_0c, mu_y_0f)
+        model = gauss_sm(mu_x[i], mu_y[i], nf, sigma_xc, sigma_xf, sigma_yc, sigma_yf, rho_c, rho_f, mu_x_0c, mu_x_0f, mu_y_0c, mu_y_0f)
         
         if model >= 10**-100:
             model1.append(np.log(model))
@@ -184,8 +184,8 @@ Like = []
 for i in range(0, n, 1):
     theta = it_par(nf, sigma_xc, sigma_xf, sigma_yc, sigma_yf, rho_c, rho_f, mu_x_0c, mu_x_0f, mu_y_0c, mu_y_0f)
     
-    likelihood2 = L(mu_x, mu_y, theta[0], theta[1], theta[2], theta[3], theta[4], theta[5], theta[6], theta[7], theta[8], theta[9], theta[10])
-    likelihood1 = L(mu_x, mu_y, nf, sigma_xc, sigma_xf, sigma_yc, sigma_yf, rho_c, rho_f, mu_x_0c, mu_x_0f, mu_y_0c, mu_y_0f)
+    likelihood2 = log_likelihood(mu_x, mu_y, theta[0], theta[1], theta[2], theta[3], theta[4], theta[5], theta[6], theta[7], theta[8], theta[9], theta[10])
+    likelihood1 = log_likelihood(mu_x, mu_y, nf, sigma_xc, sigma_xf, sigma_yc, sigma_yf, rho_c, rho_f, mu_x_0c, mu_x_0f, mu_y_0c, mu_y_0f)
     
     r = np.log(random.uniform(0.,1.))
     q = likelihood2 - likelihood1
