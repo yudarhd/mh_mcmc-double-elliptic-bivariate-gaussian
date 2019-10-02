@@ -55,7 +55,8 @@ def member_prob(mu_x, mu_y, nf, sigma_xc, sigma_xf, sigma_yc, sigma_yf, rho_c, r
     d2 = ((mu_y - mu_y_0f)/sigma_yf)
     phi_c = a1*np.exp(b1*(c1**2 + d1**2 - 2*rho_c*c1*d1))
     phi_f = a2*np.exp(b2*(c2**2 + d2**2 - 2*rho_f*c2*d2))
-    return phi_c/(phi_c + phi_f)
+    val = phi_c/(phi_c + phi_f)
+    return val
 
 #initalguess
 nf = 0.5
@@ -292,23 +293,23 @@ for i in range(len(mu_x)):
     result = member_prob(mu_x[i], mu_y[i], nf_fix, sigma_xc_fix, sigma_xf_fix, sigma_yc_fix, sigma_yf_fix, rho_c_fix, rho_f_fix, mu_x_0c_fix, mu_x_0f_fix, mu_y_0c_fix, mu_y_0f_fix)
     probability.append(result)
 
-np.savetxt('result.txt', np.c_[step, nf1, sigma_xc1, sigma_xf1, sigma_yc1, sigma_yf1, rho_c1, rho_f1, mu_x_0c1, mu_x_0f1, mu_y_0c1, mu_y_0f1, Like])
-np.savetxt('probability.txt', np.c_[probability, mu_x, mu_y, B, V])
+np.savetxt('result_final.txt', np.c_[step, nf1, sigma_xc1, sigma_xf1, sigma_yc1, sigma_yf1, rho_c1, rho_f1, mu_x_0c1, mu_x_0f1, mu_y_0c1, mu_y_0f1, Like])
+np.savetxt('probability_final.txt', np.c_[probability, mu_x, mu_y, B, V])
 
 print
 print
 print "RESULT"
-print 'nf = ', nf_fix 
-print 'sigma_xc = ', sigma_xc_fix
-print 'sigma_xf = ', sigma_xf_fix
-print 'sigma_yc = ', sigma_yc_fix
-print 'sigma_yf = ', sigma_yf_fix
-print 'rho_c = ', rho_c_fix
-print 'rho_f = ', rho_f_fix
-print 'mu_x_0c = ', mu_x_0c_fix
-print 'mu_x_0f = ', mu_x_0f_fix
-print 'mu_y_0c = ', mu_y_0c_fix
-print 'mu_y_0f = ', mu_y_0f_fix
+print 'nf = {}'.format(nf_fix) 
+print 'sigma_xc = {}'.format(sigma_xc_fix)
+print 'sigma_xf = {}'.format(sigma_xf_fix)
+print 'sigma_yc = {}'.format(sigma_yc_fix)
+print 'sigma_yf = {}'.format(sigma_yf_fix)
+print 'rho_c = {}'.format(rho_c_fix)
+print 'rho_f = {}'.format(rho_f_fix)
+print 'mu_x_0c = {}'.format(mu_x_0c_fix)
+print 'mu_x_0f = {}'.format(mu_x_0f_fix)
+print 'mu_y_0c = {}'.format(mu_y_0c_fix)
+print 'mu_y_0f = {}'.format(mu_y_0f_fix)
 
 
 
